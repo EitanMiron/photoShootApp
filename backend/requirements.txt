@@ -1,0 +1,10 @@
+# This file is for documentation/reference only. Use npm install for actual dependency management.
+# Backend runtime dependencies (exact installed versions):
+express==5.1.0
+mongoose==8.15.2
+cors==2.8.5
+dotenv==16.5.0
+bcrypt==6.0.0
+jsonwebtoken==9.0.2
+zod==3.25.64
+# Type definitions and dev tools are not included here. 
