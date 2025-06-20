@@ -1,13 +1,10 @@
 import { Request, Response, RequestHandler } from 'express';
-import User from '../models/User';
+import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 import { userSchema } from '../validation/userSchema';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
-// ========================
-// Auth Controllers
-// ========================
 
 // Register a new user
 export const registerUser: RequestHandler = async (req: Request, res: Response) => {
@@ -60,10 +57,6 @@ export const loginUser: RequestHandler = async (req: Request, res: Response) => 
   }
 };
 
-// ========================
-// CRUD Controllers
-// ========================
-
 export const createUser: RequestHandler = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
@@ -88,39 +81,67 @@ export const getUsers: RequestHandler = async (_req: Request, res: Response) => 
   }
 };
 
-export const updateUser: RequestHandler = async (req: Request, res: Response) => {
+export const updateUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const updates = req.body;
-
-    const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
-
-    if (!updatedUser) {
-      res.status(404).json({ message: 'User not found' });
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    if (!userId || userId.toString() !== id) {
+      res.status(403).json({ success: false, error: 'Unauthorized' });
       return;
     }
-
-    res.status(200).json({ message: 'User updated', user: updatedUser });
+    const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
+    if (!updatedUser) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+    res.status(200).json({ success: true, data: updatedUser });
   } catch (err) {
     console.error('Update user error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 };
 
-export const deleteUser: RequestHandler = async (req: Request, res: Response) => {
+export const deleteUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      res.status(404).json({ message: 'User not found' });
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    if (!userId || userId.toString() !== id) {
+      res.status(403).json({ success: false, error: 'Unauthorized' });
       return;
     }
-
-    res.status(200).json({ message: 'User deleted' });
+    await User.findByIdAndDelete(id);
+    res.status(200).json({ success: true, message: 'User deleted' });
   } catch (err) {
     console.error('Delete user error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+export const changePassword: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    if (!userId || userId.toString() !== id) {
+      res.status(403).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      res.status(400).json({ success: false, error: 'Current password is incorrect' });
+      return;
+    }
+    user.password = newPassword;
+    await user.save();
+    res.status(200).json({ success: true, message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 };

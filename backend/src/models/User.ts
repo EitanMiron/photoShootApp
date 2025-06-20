@@ -5,8 +5,9 @@ export interface IUser extends Document {
     name: String,
     email: String,
     password: String,
+    phone?: String,
     createdAt?: Date
-    udatedAt?: Date
+    updatedAt?: Date
     comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -31,6 +32,11 @@ const UserSchema: Schema = new Schema (
         password: {
             type: String,
             required: true
+        },
+
+        phone: {
+            type: String,
+            trim: true
         }
     },
 
@@ -62,4 +68,4 @@ UserSchema.pre<IUser>('save', async function (next) {
 
   
 const User = mongoose.model<IUser> ('User' , UserSchema)
-export default User
+export { User }
